@@ -19,36 +19,13 @@ void sensor_timerfunc(void *arg)
     uint8 pData[4];
     uint8 address;
     uint8 real_address;
-/*
-    uart0_sendStr("Scanning\r\n");
-    for(address = 1; address < 127; address++ )
-    {
-        real_address = address << 1;
-        i2c_master_start();
-        i2c_master_writeByte(real_address);
-        os_delay_us(10);
-        ack = i2c_master_getAck();
-        if (!ack) 
-            uart0_sendStr("Found  : ");
-        else
-            uart0_sendStr("Nothing: ");
-        if (address < 16)
-            os_printf("0x0");
-        else
-            os_printf("0x");
-        os_printf("%x\n\r", address);
-        i2c_master_stop();
-        os_delay_us(100);
 
-    }
-    os_printf("Done\n\r");
-*/
     //Read data
     uart0_sendStr("sensor pull: ");
-    i2c_master_stop();
-    i2c_master_start();
-    i2c_master_writeByte(0x40 << 1);
-    ack = i2c_master_getAck();
+    i2c_master_stop(); //Stop i2c
+    i2c_master_start(); //Start i2c
+    i2c_master_writeByte(0x40 << 1); //write address 0x40
+    ack = i2c_master_getAck(); // Get ack from slave
     if (ack) {
         os_printf("addr not ack when tx write cmd \n");
         i2c_master_stop();

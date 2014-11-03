@@ -188,16 +188,17 @@ uint8 ICACHE_FLASH_ATTR
 i2c_master_getAck(void)
 {
     uint8 retVal;
-    i2c_master_setDC(m_nLastSDA, 0);
+    i2c_master_setDC(m_nLastSDA, 0); // SDA ?, SCK 0
     i2c_master_wait(CLOCK_FREQ_US);
-    i2c_master_setDC(1, 0);
-    i2c_master_wait(CLOCK_FREQ_US);
-    i2c_master_setDC(1, 1);
+    i2c_master_setDC(1, 0); // SDA 1, SCK 0
+    i2c_master_wait(CLOCK_FREQ_US); //Wait for ACK
+    i2c_master_setDC(1, 1); // SDA 1, SCK 1
     i2c_master_wait(CLOCK_FREQ_US);
 
-    retVal = i2c_master_getDC();
+    retVal = i2c_master_getDC(); // read SDA
     i2c_master_wait(CLOCK_FREQ_US);
-    i2c_master_setDC(1, 0);
+
+    i2c_master_setDC(1, 0); // SDA 1, SCK 0
     i2c_master_wait(CLOCK_FREQ_US);
 
     return retVal;
@@ -257,21 +258,16 @@ i2c_master_writeByte(uint8 wrdata)
 
     i2c_master_wait(CLOCK_FREQ_US);
 
-    i2c_master_setDC(m_nLastSDA, 0);
+    i2c_master_setDC(m_nLastSDA, 0); // set CLK low
     i2c_master_wait(CLOCK_FREQ_US);
 
     for (i = 7; i >= 0; i--) {
         dat = wrdata >> i;
-        i2c_master_setDC(dat, 0);
+        i2c_master_setDC(dat, 0); // set data, CLK low
         i2c_master_wait(CLOCK_FREQ_US);
-        i2c_master_setDC(dat, 1);
+        i2c_master_setDC(dat, 1); // set data, CLK high
         i2c_master_wait(CLOCK_FREQ_US);
-
-        if (i == 0) {
-            i2c_master_wait(3);   ////
-        }
-
-        i2c_master_setDC(dat, 0);
+        i2c_master_setDC(dat, 0); // set data, CLK low
         i2c_master_wait(CLOCK_FREQ_US);
     }
 }
