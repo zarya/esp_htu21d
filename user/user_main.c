@@ -1,10 +1,21 @@
 #include "ets_sys.h"
-#include "driver/i2c_master.h"
 #include "driver/uart.h"
 #include "osapi.h"
 #include "os_type.h"
+#include "i2c/i2c.h"
 #include "user_interface.h"
 #include "config.h"
+
+
+#define HTDU21D_ADDRESS 0x40  //Unshifted 7-bit I2C address for the sensor
+
+#define TRIGGER_TEMP_MEASURE_HOLD  0xE3
+#define TRIGGER_HUMD_MEASURE_HOLD  0xE5
+#define TRIGGER_TEMP_MEASURE_NOHOLD  0xF3
+#define TRIGGER_HUMD_MEASURE_NOHOLD  0xF5
+#define WRITE_USER_REG  0xE6
+#define READ_USER_REG  0xE7
+#define SOFT_RESET  0xFE
 
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
 
@@ -22,40 +33,39 @@ void sensor_timerfunc(void *arg)
 
     //Read data
     uart0_sendStr("sensor pull: ");
-    i2c_master_stop(); //Stop i2c
-    i2c_master_start(); //Start i2c
-    i2c_master_writeByte(0x40 << 1); //write address 0x40
-    ack = i2c_master_getAck(); // Get ack from slave
-    if (ack) {
+    i2c_start(); //Start i2c
+    i2c_writeByte(HTDU21D_ADDRESS << 1); //write address 0x40
+    ack = i2c_check_ack(); // Get ack from slave
+    if (!ack) {
         os_printf("addr not ack when tx write cmd \n");
-        i2c_master_stop();
+        i2c_stop();
         return;
     } else uart0_sendStr("ack ");
     os_delay_us(10);
-    i2c_master_writeByte(0xf3);
-    ack = i2c_master_getAck();
+    i2c_writeByte(TRIGGER_TEMP_MEASURE_NOHOLD);
+    ack = i2c_check_ack();
     if (!ack) uart0_sendStr("ack ");
 
     os_delay_us(100);
     ack = 1;
     while (ack) {
-        i2c_master_start();
-        address = 0x40 << 1;
+        i2c_start();
+        address = HTDU21D_ADDRESS << 1;
         address |= 1;
-        i2c_master_writeByte(address);
-        ack = i2c_master_getAck();
+        i2c_writeByte(address);
+        ack = i2c_check_ack();
     }
     uart0_sendStr("ack ");
 
-    uint16_t t = i2c_master_readByte();
-    i2c_master_setAck(0); 
+    uint16_t t = i2c_readByte();
+    i2c_send_ack(1); 
     t <<= 8;
-    t |= i2c_master_readByte();
-    i2c_master_setAck(0);
+    t |= i2c_readByte();
+    i2c_send_ack(1); 
 
-    uint8_t crc = i2c_master_readByte();
-    i2c_master_setAck(1);;
-    i2c_master_stop();
+    uint8_t crc = i2c_readByte();
+    i2c_send_ack(1); 
+    i2c_stop();
 
     float temp = t;
     temp *= 175.72;
@@ -89,9 +99,17 @@ void user_init(void)
     wifi_set_opmode( 0x1 );
     wifi_station_set_config(&stationConf);
 
-    i2c_master_gpio_init();
+    i2c_init();
 
     uart0_sendStr("Booting\r\n");
+
+    //Soft reset the HTU
+    i2c_start();
+    i2c_writeByte(HTDU21D_ADDRESS << 1);
+    i2c_check_ack();
+    i2c_writeByte(SOFT_RESET);
+    i2c_check_ack();
+    i2c_stop();
 
     //Disarm timer
     os_timer_disarm(&sensor_timer);

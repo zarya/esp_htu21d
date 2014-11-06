@@ -25,7 +25,7 @@ ESPPORT		?= /dev/ttyUSB0
 TARGET		= app
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES		= driver user
+MODULES		= driver user driver/i2c
 EXTRA_INCDIR    = include /usr/include /usr/include/i386-linux-gnu
 
 # libraries used in this project, mainly provided by the SDK
